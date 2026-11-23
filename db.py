@@ -11,8 +11,13 @@ COLUMNS = ["sku", "name", "stock", "avg_daily_sales",
            "lead_time_days", "expiry_days", "reorder_level"]
 
 
+def env(name, default=""):
+    # strip so a stray space/newline pasted into a hosting dashboard doesn't break the login
+    return os.getenv(name, default).strip()
+
+
 def db_name():
-    return os.getenv("DB_NAME", "smart_retail")
+    return env("DB_NAME", "smart_retail")
 
 
 def ssl_options():
@@ -26,10 +31,10 @@ def ssl_options():
 def get_connection(use_db=True):
     return pymysql.connect(
         ssl=ssl_options(),
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", "3306")),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
+        host=env("DB_HOST", "localhost"),
+        port=int(env("DB_PORT", "3306")),
+        user=env("DB_USER", "root"),
+        password=env("DB_PASSWORD"),
         database=db_name() if use_db else None,
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
