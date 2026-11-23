@@ -1,0 +1,33 @@
+{% extends "auth_base.html" %}
+{% block title %}Reset password{% endblock %}
+{% block content %}
+  <a class="back-link" href="{{ url_for('login') }}"><svg class="i sm"><use href="#i-chevron-left"/></svg>Back to sign in</a>
+  <h1>Reset your password</h1>
+  <p class="muted">Use the recovery code you saved when you made the account.</p>
+
+  {% if errors._ %}<div class="banner error" role="alert"><svg class="i"><use href="#i-alert"/></svg><span>{{ errors._ }}</span></div>{% endif %}
+
+  <form method="post" class="auth-form" novalidate>
+    <div class="field">
+      <label for="username">Username</label>
+      <input id="username" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+    </div>
+    <div class="field">
+      <label for="code">Recovery code</label>
+      <input id="code" name="code" class="mono" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="XXXX-XXXX-XXXX">
+    </div>
+    <div class="field">
+      <label for="password">New password</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" class="{{ 'invalid' if errors.password }}" required>
+      {% if errors.password %}<span class="field-error">{{ errors.password }}</span>{% else %}<span class="help">At least 6 characters</span>{% endif %}
+    </div>
+    <div class="field">
+      <label for="confirm">Confirm new password</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" class="{{ 'invalid' if errors.confirm }}" required>
+      {% if errors.confirm %}<span class="field-error">{{ errors.confirm }}</span>{% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary block">Reset password</button>
+  </form>
+
+  <p class="auth-note">Lost the code too? Run <code>python reset_password.py</code> in the app folder.</p>
+{% endblock %}

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#172B4D">
+  <title>Smart Retail</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23172B4D'/%3E%3Cpath d='M5 10l1.2-4h11.6L19 10M5 10h14M6.5 10v8h11v-8' fill='none' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
+</head>
+<body>
+{% include "_icons.html" %}
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><svg class="i"><use href="#i-store"/></svg></span>
+      <span class="brand-text"><b>Smart Retail</b><small>Stock &amp; Expiry Assistant</small></span>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item" href="#overview" data-page="overview"><svg class="i"><use href="#i-grid"/></svg><span>Overview</span></a>
+      <a class="nav-item" href="#inventory" data-page="inventory"><svg class="i"><use href="#i-package"/></svg><span>Inventory</span></a>
+      <a class="nav-item" href="#expiry" data-page="expiry"><svg class="i"><use href="#i-clock"/></svg><span>Expiry management</span><b class="nav-count" id="nav-expiry-count" hidden></b></a>
+      <a class="nav-item" href="#reorder" data-page="reorder"><svg class="i"><use href="#i-cart"/></svg><span>Reorder list</span><b class="nav-count" id="nav-reorder-count" hidden></b></a>
+      <a class="nav-item" href="#insights" data-page="insights"><svg class="i"><use href="#i-chart"/></svg><span>Insights &amp; reports</span></a>
+      <a class="nav-item" href="#assistant" data-page="assistant"><svg class="i"><use href="#i-message"/></svg><span>Assistant</span></a>
+      <div class="nav-sep"></div>
+      <a class="nav-item" href="#settings" data-page="settings"><svg class="i"><use href="#i-sliders"/></svg><span>Settings</span></a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="account">
+        <span class="avatar" aria-hidden="true">{{ user[:1] | upper }}</span>
+        <span class="account-text"><b title="{{ user }}">{{ user }}</b><small>Owner</small></span>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button type="submit" class="icon-btn on-dark" title="Sign out" aria-label="Sign out"><svg class="i"><use href="#i-logout"/></svg></button>
+        </form>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menu-btn" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false"><svg class="i"><use href="#i-menu"/></svg></button>
+
+      <div class="page-title">
+        <nav class="crumbs" aria-label="Breadcrumb"><span>Smart Retail</span><span aria-hidden="true">/</span><span id="crumb-current">Overview</span></nav>
+        <h1 id="page-title">Overview</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="search" id="search-box">
+          <svg class="i"><use href="#i-search"/></svg>
+          <input type="search" id="global-search" placeholder="Search name or SKU" aria-label="Search products by name or SKU" autocomplete="off" aria-controls="search-results" aria-expanded="false">
+          <div class="menu search-results" id="search-results" role="listbox" hidden></div>
+        </div>
+
+        <div class="dropdown">
+          <button class="icon-btn bell" id="alerts-btn" aria-label="Inventory alerts" aria-haspopup="true" aria-expanded="false" data-dropdown="alerts-menu">
+            <svg class="i"><use href="#i-bell"/></svg><b class="bell-count" id="alerts-count" hidden></b>
+          </button>
+          <div class="menu alerts-menu" id="alerts-menu" hidden>
+            <div class="menu-head"><b>Inventory alerts</b><span class="muted" id="alerts-sub"></span></div>
+            <div id="alerts-list"></div>
+            <a class="menu-foot" href="#overview">View today's priorities</a>
+          </div>
+        </div>
+
+        <div class="dropdown">
+          <button class="user-btn" aria-haspopup="true" aria-expanded="false" data-dropdown="user-menu">
+            <span class="avatar sm" aria-hidden="true">{{ user[:1] | upper }}</span>
+            <span class="user-btn-name">{{ user }}</span>
+            <svg class="i sm"><use href="#i-chevron-down"/></svg>
+          </button>
+          <div class="menu user-menu" id="user-menu" hidden>
+            <div class="menu-head"><span class="muted">Signed in as</span><b>{{ user }}</b></div>
+            <a class="menu-item" href="#settings"><svg class="i"><use href="#i-sliders"/></svg>Settings</a>
+            <form method="post" action="{{ url_for('logout') }}">
+              <button type="submit" class="menu-item"><svg class="i"><use href="#i-logout"/></svg>Sign out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="progress" id="progress" hidden></div>
+    </header>
+
+    <main class="content" id="content">
+      <div class="banner error" id="load-error" role="alert" hidden>
+        <svg class="i"><use href="#i-alert"/></svg>
+        <span id="load-error-text">Couldn't load inventory data.</span>
+        <button class="btn btn-secondary sm" id="retry-btn">Retry</button>
+      </div>
+
+      <section class="page" id="page-overview" data-title="Overview" hidden>
+        <div class="page-head">
+          <div>
+            <h2>Inventory overview</h2>
+            <p class="muted">Stock, expiry and what to reorder. <span id="today-date"></span></p>
+          </div>
+          <div class="page-actions">
+            <a class="btn btn-secondary" href="#reorder"><svg class="i"><use href="#i-cart"/></svg>Reorder list</a>
+            <button class="btn btn-primary" data-action="add-product"><svg class="i"><use href="#i-plus"/></svg>Add product</button>
+          </div>
+        </div>
+
+        <div class="kpis" id="kpis">
+          <div class="kpi"><span class="kpi-label">Active products</span><b class="kpi-value" id="k-total">–</b><span class="kpi-note">In your catalogue</span></div>
+          <div class="kpi"><span class="kpi-label"><i class="dot critical"></i>Below reorder level</span><b class="kpi-value" id="k-low">–</b><span class="kpi-note" id="k-low-note">&nbsp;</span></div>
+          <div class="kpi"><span class="kpi-label"><i class="dot warning"></i>Nearing expiry</span><b class="kpi-value" id="k-near">–</b><span class="kpi-note" id="k-near-note">&nbsp;</span></div>
+          <div class="kpi"><span class="kpi-label"><i class="dot expired"></i>Expired</span><b class="kpi-value" id="k-expired">–</b><span class="kpi-note" id="k-expired-note">&nbsp;</span></div>
+        </div>
+
+        <div class="layout-2">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h3>Today's priorities</h3><p class="muted">Most urgent first.</p></div>
+              <span class="pill" id="prio-count"></span>
+            </div>
+            <div class="table-scroll">
+              <table class="table stack" id="prio-table">
+                <thead><tr><th>Product</th><th class="num">Stock</th><th class="num">Expires in</th><th>Reason</th><th>Recommended action</th></tr></thead>
+                <tbody id="prio-body"><tr class="state-row"><td colspan="5">Loading…</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <aside class="panel side-panel">
+            <section class="side-section">
+              <div class="section-title"><h3>Stock health</h3><span class="muted" id="health-total"></span></div>
+              <div class="stackbar" id="health-bar" role="img" aria-label="Products by status"></div>
+              <ul class="legend-list" id="health-legend"></ul>
+            </section>
+            <section class="side-section">
+              <div class="section-title"><h3>Replenishment</h3><a href="#reorder" class="link">Open list</a></div>
+              <dl class="facts" id="reorder-facts"></dl>
+            </section>
+            <section class="side-section">
+              <div class="section-title"><h3>Expiring next</h3><a href="#expiry" class="link">Expiry management</a></div>
+              <ul class="compact-list" id="expiring-next"></ul>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section class="page" id="page-inventory" data-title="Inventory" hidden>
+        <div class="page-head">
+          <div><h2>Inventory</h2><p class="muted">All your products.</p></div>
+          <div class="page-actions">
+            <a class="btn btn-secondary" data-export="products" href="/export/products.csv"><svg class="i"><use href="#i-download"/></svg>Export CSV</a>
+            <button class="btn btn-primary" data-action="add-product"><svg class="i"><use href="#i-plus"/></svg>Add product</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="toolbar">
+            <div class="search inline">
+              <svg class="i"><use href="#i-search"/></svg>
+              <input type="search" id="inv-search" placeholder="Search name or SKU" aria-label="Filter inventory by name or SKU">
+            </div>
+            <label class="select-wrap"><span>Stock</span>
+              <select id="inv-stock">
+                <option value="all">All</option><option value="low">Low stock</option><option value="ok">In stock</option>
+              </select>
+            </label>
+            <label class="select-wrap"><span>Expiry</span>
+              <select id="inv-expiry">
+                <option value="all">All</option><option value="expired">Expired</option><option value="near">Near expiry</option><option value="ok">Not near expiry</option>
+              </select>
+            </label>
+            <button class="btn btn-ghost sm" id="inv-clear" hidden>Clear filters</button>
+            <span class="muted toolbar-count" id="inv-count"></span>
+          </div>
+          <div class="table-scroll">
+            <table class="table" id="inv-table">
+              <thead><tr>
+                <th data-sort="name" aria-sort="ascending"><button>Product</button></th>
+                <th data-sort="sku"><button>SKU</button></th>
+                <th data-sort="stock" class="num"><button>Available</button></th>
+                <th data-sort="avg_daily_sales" class="num"><button>Avg daily sales</button></th>
+                <th data-sort="cover" class="num"><button>Days of cover</button></th>
+                <th data-sort="expiry_days" class="num"><button>Expires in</button></th>
+                <th data-sort="reorder_qty" class="num"><button>Reorder qty</button></th>
+                <th data-sort="severity"><button>Status</button></th>
+                <th class="actions"><span class="sr-only">Actions</span></th>
+              </tr></thead>
+              <tbody id="inv-body"><tr class="state-row"><td colspan="9">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="pager" id="inv-pager"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-expiry" data-title="Expiry management" hidden>
+        <div class="page-head">
+          <div><h2>Expiry management</h2><p class="muted">Days left on the current batch of each product.</p></div>
+          <div class="page-actions">
+            <label class="window-input">Warning window
+              <input type="number" min="0" max="365" step="1" data-threshold aria-label="Days before expiry to warn">
+              days
+            </label>
+          </div>
+        </div>
+        <div id="expiry-groups"></div>
+      </section>
+
+      <section class="page" id="page-reorder" data-title="Reorder list" hidden>
+        <div class="page-head">
+          <div><h2>Reorder list</h2><p class="muted">What to order and how much. <span class="print-only" id="print-meta"></span></p></div>
+          <div class="page-actions no-print">
+            <a class="btn btn-secondary" data-export="orders" href="/export/orders.csv"><svg class="i"><use href="#i-download"/></svg>Export CSV</a>
+            <button class="btn btn-primary" id="print-btn"><svg class="i"><use href="#i-printer"/></svg>Print list</button>
+          </div>
+        </div>
+        <div class="banner info no-print">
+          <svg class="i"><use href="#i-info"/></svg>
+          <span>Quantity covers the lead time plus 2 extra days of sales. Print or export it to place the order.</span>
+        </div>
+        <div class="panel">
+          <div class="table-scroll">
+            <table class="table" id="reorder-table">
+              <thead><tr><th>Product</th><th>SKU</th><th class="num">In stock</th><th class="num">Avg daily sales</th><th class="num">Lead time</th><th class="num">Days of cover</th><th class="num">Order qty</th><th>Why it's recommended</th><th class="print-only">Received</th></tr></thead>
+              <tbody id="reorder-body"><tr class="state-row"><td colspan="9">Loading…</td></tr></tbody>
+              <tfoot id="reorder-foot"></tfoot>
+            </table>
+          </div>
+        </div>
+        <div class="panel no-print" id="reorder-watch" hidden>
+          <div class="panel-head"><div><h3>Low stock, no order needed yet</h3><p class="muted">Stock is low but still covers the lead time.</p></div></div>
+          <ul class="compact-list padded" id="reorder-watch-list"></ul>
+        </div>
+      </section>
+
+      <section class="page" id="page-insights" data-title="Insights & reports" hidden>
+        <div class="page-head">
+          <div><h2>Insights &amp; reports</h2><p class="muted">Suggestions based on your current stock.</p></div>
+        </div>
+
+        <div class="layout-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Recommendations</h3><p class="muted">Grouped by when to act.</p></div></div>
+            <div id="recommendations"></div>
+          </div>
+          <aside class="panel side-panel">
+            <section class="side-section">
+              <div class="section-title"><h3>Top sellers</h3><span class="muted">Units per day</span></div>
+              <ol class="compact-list ranked" id="best-sellers"></ol>
+            </section>
+            <section class="side-section">
+              <div class="section-title"><h3>Rule evaluation</h3></div>
+              <dl class="facts" id="rule-eval"></dl>
+              <p class="muted small">Baseline = what a low-stock-only alert would catch. False alarms should be 0.</p>
+            </section>
+            <section class="side-section">
+              <div class="section-title"><h3>Reports</h3></div>
+              <a class="report-link" data-export="products" href="/export/products.csv"><svg class="i"><use href="#i-download"/></svg><span><b>Inventory report</b><small>All products (CSV)</small></span></a>
+              <a class="report-link" data-export="orders" href="/export/orders.csv"><svg class="i"><use href="#i-download"/></svg><span><b>Reorder list</b><small>What to order (CSV)</small></span></a>
+            </section>
+          </aside>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Days of stock vs. supplier lead time</h3><p class="muted">If a bar ends before the line, it runs out before delivery.</p></div></div>
+            <div class="chart" id="cover-chart"></div>
+            <ul class="legend-inline">
+              <li><i class="sw critical"></i>Runs out before delivery</li>
+              <li><i class="sw warning"></i>Below reorder level</li>
+              <li><i class="sw ok"></i>Sufficient</li>
+              <li><i class="sw marker"></i>Lead time</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Days until expiry</h3><p class="muted">Shortest first.</p></div></div>
+            <div class="chart" id="expiry-chart"></div>
+            <ul class="legend-inline">
+              <li><i class="sw expired"></i>Expired</li>
+              <li><i class="sw warning"></i>Within warning window</li>
+              <li><i class="sw ok"></i>Outside window</li>
+            </ul>
+          </div>
+        </div>
+
+      </section>
+
+      <section class="page" id="page-assistant" data-title="Assistant" hidden>
+        <div class="page-head">
+          <div><h2>Inventory assistant</h2><p class="muted">Ask about your stock.</p></div>
+        </div>
+        <div class="assistant-layout">
+          <aside class="panel assistant-side">
+            <h3>How it works</h3>
+            <p class="muted">It matches keywords and product names and answers from the same numbers as the dashboard. It's rule based, not an AI model, so it only knows about your stock.</p>
+            <h3>Suggested questions</h3>
+            <div class="suggest-list" id="suggestions"></div>
+          </aside>
+          <div class="panel chat-panel">
+            <div class="chat-log" id="chat" aria-live="polite"></div>
+            <form class="chat-form" id="ask-form" autocomplete="off">
+              <input id="ask-input" maxlength="300" placeholder="Ask about stock, reordering or expiry…" aria-label="Your question">
+              <button class="btn btn-primary" type="submit" id="ask-btn"><svg class="i"><use href="#i-send"/></svg>Ask</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="page narrow" id="page-settings" data-title="Settings" hidden>
+        <div class="page-head"><div><h2>Settings</h2><p class="muted">Account and data for this shop.</p></div></div>
+
+        <div class="panel settings">
+          <section class="setting">
+            <div class="setting-info"><h3>Account</h3><p class="muted">Signed in as <b>{{ user }}</b>.</p></div>
+            <form method="post" action="{{ url_for('logout') }}"><button type="submit" class="btn btn-secondary"><svg class="i"><use href="#i-logout"/></svg>Sign out</button></form>
+          </section>
+
+          <section class="setting column">
+            <div class="setting-info"><h3>Change password</h3><p class="muted">Use at least 6 characters.</p></div>
+            <form class="form-grid three" id="pw-form" novalidate>
+              <div class="field"><label for="pw-current">Current password</label><input id="pw-current" name="current" type="password" autocomplete="current-password" required></div>
+              <div class="field"><label for="pw-new">New password</label><input id="pw-new" name="password" type="password" autocomplete="new-password" required></div>
+              <div class="field"><label for="pw-confirm">Confirm new password</label><input id="pw-confirm" name="confirm" type="password" autocomplete="new-password" required></div>
+              <div class="form-actions"><button type="submit" class="btn btn-primary">Update password</button></div>
+            </form>
+          </section>
+
+          <section class="setting">
+            <div class="setting-info"><h3>Shop name</h3><p class="muted">Shown on the printed reorder list.</p></div>
+            <input id="shop-input" class="setting-input" maxlength="40" placeholder="e.g. Sharma General Store" aria-label="Shop name">
+          </section>
+
+          <section class="setting">
+            <div class="setting-info"><h3>Expiry warning window</h3><p class="muted">Flag products expiring within this many days. Default is 3.</p></div>
+            <label class="window-input"><input type="number" min="0" max="365" step="1" data-threshold aria-label="Days before expiry to warn"> days</label>
+          </section>
+        </div>
+
+        <h3 class="settings-title">Data</h3>
+        <div class="panel settings">
+          <section class="setting">
+            <div class="setting-info"><h3>Load sample products</h3><p class="muted">Replaces all products with 6 sample ones.</p></div>
+            <button class="btn btn-secondary" id="reset-btn"><svg class="i"><use href="#i-refresh"/></svg>Load samples</button>
+          </section>
+          <section class="setting">
+            <div class="setting-info"><h3>Remove all products</h3><p class="muted">Start empty and add your own stock. Can't be undone.</p></div>
+            <button class="btn btn-danger-outline" id="clear-btn"><svg class="i"><use href="#i-trash"/></svg>Remove all</button>
+          </section>
+        </div>
+        <p class="muted small footnote">Data is saved in MySQL on this computer.</p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<dialog class="drawer" id="product-dialog" aria-labelledby="product-dialog-title">
+  <form id="product-form" novalidate>
+    <header class="drawer-head">
+      <div><h3 id="product-dialog-title">Add product</h3><p class="muted" id="product-dialog-sub">Enter stock and sales.</p></div>
+      <button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button>
+    </header>
+    <div class="drawer-body">
+      <div class="banner error" id="product-form-error" hidden></div>
+      <div class="field"><label for="f-name">Product name</label><input id="f-name" name="name" maxlength="100" required placeholder="e.g. Eggs (12 pack)"></div>
+      <div class="field"><label for="f-sku">SKU</label><input id="f-sku" name="sku" maxlength="10" required placeholder="e.g. N201"><span class="help">Up to 10 characters. Can't be changed later.</span></div>
+      <div class="form-grid two">
+        <div class="field"><label for="f-stock">Available stock</label><input id="f-stock" name="stock" type="number" min="0" step="1" required inputmode="numeric"><span class="help">Units on hand now</span></div>
+        <div class="field"><label for="f-sales">Average daily sales</label><input id="f-sales" name="avg_daily_sales" type="number" min="0" step="0.01" required inputmode="decimal"><span class="help">Units sold per day</span></div>
+        <div class="field"><label for="f-lead">Supplier lead time</label><input id="f-lead" name="lead_time_days" type="number" min="0" step="1" required inputmode="numeric"><span class="help">Days from order to delivery</span></div>
+        <div class="field"><label for="f-expiry">Days until expiry</label><input id="f-expiry" name="expiry_days" type="number" min="0" step="1" required inputmode="numeric"><span class="help">For the current batch. 0 = expired</span></div>
+        <div class="field"><label for="f-level">Reorder level</label><input id="f-level" name="reorder_level" type="number" min="0" step="1" required inputmode="numeric"><span class="help">Flag low stock at or below this</span></div>
+      </div>
+      <div class="calc-preview" id="product-preview" hidden></div>
+    </div>
+    <footer class="drawer-foot">
+      <button type="button" class="btn btn-danger-ghost" id="product-delete" hidden><svg class="i"><use href="#i-trash"/></svg>Delete</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn btn-secondary" data-close>Close</button>
+      <button type="submit" class="btn btn-primary" id="product-save">Save product</button>
+    </footer>
+  </form>
+</dialog>
+
+<dialog class="modal" id="confirm-dialog" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <div class="modal-body">
+      <span class="modal-icon" aria-hidden="true"><svg class="i"><use href="#i-alert"/></svg></span>
+      <div><h3 id="confirm-title">Are you sure?</h3><p class="muted" id="confirm-text"></p></div>
+    </div>
+    <footer class="modal-foot">
+      <button value="cancel" class="btn btn-secondary">Cancel</button>
+      <button value="ok" class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </footer>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="tooltip" id="tooltip" role="tooltip" hidden></div>
+
+<script src="{{ asset('app.js') }}"></script>
+</body>
+</html>

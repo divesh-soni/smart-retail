@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Save your recovery code{% endblock %}
+{% block content %}
+  <span class="step-label">{{ "Account created" if first else "Password changed" }}</span>
+  <h1>Save your recovery code</h1>
+  <p class="muted">You need this to reset your password. Write it down, it's shown <b>only once</b>.</p>
+
+  <div class="recovery">
+    <code id="recovery-code">{{ code }}</code>
+  </div>
+  {% if not first %}<p class="auth-note">Your old code won't work anymore.</p>{% endif %}
+
+  <a class="btn btn-primary block" href="{{ url_for('index') }}">I've saved it, continue</a>
+{% endblock %}
